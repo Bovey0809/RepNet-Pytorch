@@ -24,72 +24,78 @@ class miniDataset(Dataset):
 
     def getFrames(self, path = None):
         """returns frames"""
-    
+
         frames = []
         if path is None:
             path = self.path
-        
+
         cap = cv2.VideoCapture(path)
         while cap.isOpened():
             ret, frame = cap.read()
             if ret is False:
                 break
-            
+
             img = Image.fromarray(frame)
             frames.append(img)
-        
+
         cap.release()
-        
+
         return frames
 
     def __getitem__(self, index):
         
         curFrames = self.getFrames()
-        
+
         output_len = min(len(curFrames), randint(44, 64))
-                
-        newFrames = []
-        for i in range(1, output_len + 1):
-            newFrames.append(curFrames[i * len(curFrames)//output_len  - 1])
+
+        newFrames = [
+            curFrames[i * len(curFrames) // output_len - 1]
+            for i in range(1, output_len + 1)
+        ]
 
         a = randint(0, 64 - output_len)
         b = 64 - output_len - a
-        
+
         randpath = random.choice(glob.glob('drive/MyDrive/PR_Repnet/synthvids/train*.mp4'))
         randFrames = self.getFrames(randpath)
-        newRandFrames = []
-        for i in range(1, a + b + 1):
-            newRandFrames.append(randFrames[i * len(randFrames)//(a+b)  - 1])
+        newRandFrames = [
+            randFrames[i * len(randFrames) // (a + b) - 1]
+            for i in range(1, a + b + 1)
+        ]
 
-        
-        same = np.random.choice([0, 1], p = [0.5, 0.5])
-        if same:
-            finalFrames = [newFrames[0] for i in range(a)]
-            finalFrames.extend( newFrames )        
-            finalFrames.extend([newFrames[-1] for i in range(b)] )
+        if same := np.random.choice([0, 1], p=[0.5, 0.5]):
+            finalFrames = [newFrames[0] for _ in range(a)]
+            finalFrames.extend( newFrames )
+            finalFrames.extend([newFrames[-1] for _ in range(b)])
         else:
             finalFrames = newRandFrames[:a]
-            finalFrames.extend( newFrames )        
+            finalFrames.extend( newFrames )
             finalFrames.extend( newRandFrames[a:] )
 
         Xlist = []
         for img in finalFrames:
-        
+
             preprocess = transforms.Compose([
             transforms.Resize((112, 112)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
             frameTensor = preprocess(img).unsqueeze(0)
             Xlist.append(frameTensor)
-        
-        Xlist = [Xlist[i] if a<i<(64-b) else torch.nn.functional.dropout(Xlist[i], 0.2) for i in range(64)]  
+
+        Xlist = [Xlist[i] if a<i<(64-b) else torch.nn.functional.dropout(Xlist[i], 0.2) for i in range(64)]
         X = torch.cat(Xlist)
-        y = [0 for i in range(0,a)]
-        y.extend([output_len/self.count if 1<output_len/self.count<32 else 0 for i in range(0, output_len)])
-        
-        y.extend( [ 0 for i in range(0, b)] )
+        y = [0 for _ in range(a)]
+        y.extend(
+            [
+                output_len / self.count if 1 < output_len / self.count < 32 else 0
+                for _ in range(output_len)
+            ]
+        )
+
+
+        y.extend([0 for _ in range(b)])
         y = torch.FloatTensor(y).unsqueeze(-1)
-        
+
         return X, y
         
     def __len__(self):
@@ -125,20 +131,19 @@ class dataset_with_indices(Dataset):
 def getCombinedDataset(dfPath, videoDir, videoPrefix):
     df = pd.read_csv(dfPath)
     path_prefix = videoDir + '/' + videoPrefix
-    
+
     files_present = []
-    for i in range(0, len(df)):
+    for i in range(len(df)):
         path_to_video = path_prefix + str(i) + '.mp4'
         if os.path.exists(path_to_video):
             files_present.append(i)
 
     df = df.iloc[files_present]
-    
+
     miniDatasetList = []
-    for i in range(0, len(df)):
+    for i in range(len(df)):
         dfi = df.iloc[[i]]
         path_to_video = path_prefix + str(dfi.index.item()) +'.mp4'
         miniDatasetList.append(miniDataset(dfi, path_to_video))
-        
-    megaDataset = ConcatDataset(miniDatasetList)
-    return megaDataset
+
+    return ConcatDataset(miniDatasetList)
