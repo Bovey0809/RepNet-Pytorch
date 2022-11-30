@@ -43,8 +43,7 @@ class ResNet50Bottom(nn.Module):
 
     def forward(self, x):
         self.original_model(x)
-        output = self.activation['comp']
-        return output
+        return self.activation['comp']
 
 #---------------------------------------------------------------------------
 
@@ -83,8 +82,7 @@ class TransEncoder(nn.Module):
                 
     def forward(self, src):
         src = self.pos_encoder(src)
-        e_op = self.trans_encoder(src)
-        return e_op
+        return self.trans_encoder(src)
 
 
 #=============Model====================
@@ -142,7 +140,7 @@ class RepNet(nn.Module):
         x = x.view(batch_size, self.num_frames, x.shape[1],  x.shape[2],  x.shape[3])
         x = x.transpose(1, 2)
         x = F.relu(self.bn1(self.conv3D(x)))
-                        
+
         x = x.view(batch_size, 512, self.num_frames, 7, 7)
         x = self.pool(x).squeeze(3).squeeze(3)
         x = x.transpose(1, 2)                           #batch, num_frame, 512
@@ -150,7 +148,7 @@ class RepNet(nn.Module):
 
         x = F.relu(self.sims(x))
         xret = x
-        
+
         x = F.relu(self.bn2(self.conv3x3(x)))     #batch, 32, num_frame, num_frame
         #print(x.shape)
         x = self.dropout1(x)
@@ -158,9 +156,9 @@ class RepNet(nn.Module):
         x = x.permute(0, 2, 3, 1)
         x = x.reshape(batch_size, self.num_frames, -1)  #batch, num_frame, 32*num_frame
         x = self.ln1(F.relu(self.input_projection(x)))  #batch, num_frame, d_model=512
-        
+
         x = x.transpose(0, 1)                          #num_frame, batch, d_model=512
-        
+
         #period
         x1 = self.transEncoder1(x)
         y1 = x1.transpose(0, 1)
@@ -174,8 +172,6 @@ class RepNet(nn.Module):
         y2 = F.relu(self.ln2_2(self.fc2_1(y2)))
         y2 = F.relu(self.fc2_2(y2))
         y2 = F.relu(self.fc2_3(y2)) 
-        
+
         #y1 = y1.transpose(1, 2)                         #Cross enropy wants (minbatch*classes*dimensions)
-        if ret_sims:
-            return y1, y2, xret
-        return y1, y2
+        return (y1, y2, xret) if ret_sims else (y1, y2)

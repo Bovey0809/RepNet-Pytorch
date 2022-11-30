@@ -62,9 +62,12 @@ model = model.to(device)
 print("done")
 
 """Testing the training loop with sample datasets"""
- 
-sampleDatasetA = torch.utils.data.Subset(trainDataset, range(0, len(trainDataset)))
-sampleDatasetB = torch.utils.data.Subset(testDataset, range(0,  len(testDataset)))
+
+sampleDatasetA = torch.utils.data.Subset(
+    trainDataset, range(len(trainDataset))
+)
+
+sampleDatasetB = torch.utils.data.Subset(testDataset, range(len(testDataset)))
 
 print(len(sampleDatasetA))
 

@@ -27,17 +27,17 @@ class BlenderDataset(Dataset):
 
     def getFrames(self, path):
         """returns frames"""
-    
+
         frames = []
         cap = cv2.VideoCapture(path)
         while cap.isOpened():
             ret, frame = cap.read()
             if ret is False:
                 break
-            
+
             img = Image.fromarray(frame)
             frames.append(img)
-        
+
         cap.release()
         return frames
 
@@ -56,14 +56,14 @@ class BlenderDataset(Dataset):
 
         Xlist = []
         for img in curFrames:
-        
+
             preprocess = transforms.Compose([
             transforms.Resize((182, 182)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.45, 0.45, 0.45], std=[0.225, 0.225, 0.225])])
             frameTensor = preprocess(img).unsqueeze(0)
             Xlist.append(frameTensor)
-        
+
 
         ipart = nindex % parts
         X = torch.cat(Xlist[ipart*self.frame_per_vid:(ipart+1)*self.frame_per_vid])
@@ -78,8 +78,11 @@ class BlenderDataset(Dataset):
             if y[i] >= 32:
                 y[i] = 0
         y = torch.FloatTensor(y[ipart*self.frame_per_vid:(ipart+1)*self.frame_per_vid]).unsqueeze(-1)
-        
-        assert X.shape[0] == self.frame_per_vid, str(X.shape[0]) + " "+str(self.frame_per_vid)
+
+        assert (
+            X.shape[0] == self.frame_per_vid
+        ), f"{str(X.shape[0])} {str(self.frame_per_vid)}"
+
         assert(y.shape[0] == self.frame_per_vid)
 
         return X, y

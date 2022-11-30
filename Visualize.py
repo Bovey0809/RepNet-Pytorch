@@ -16,7 +16,7 @@ def predRep(vidPath, model, numdivs = 1):
     countbest = [-1]
     simsbest = []
     periodbest = []
-    
+
     for i in range(numdivs, numdivs+1):
         frames = getFrames(vidPath, 64*i)
         periodicity = []
@@ -29,7 +29,7 @@ def predRep(vidPath, model, numdivs = 1):
             periodLength.extend(list(periodLengthj.squeeze().cpu().numpy()))
             X.append(x)
             sims.append(sim)
-        
+
         X = torch.cat(X)
         numofReps = 0
         count = []
@@ -40,14 +40,14 @@ def predRep(vidPath, model, numdivs = 1):
                 numofReps += max(0, periodicity[i]/(periodLength[i]))
 
             count.append(round(float(numofReps), 2))
-        
+
         if count[-1] > countbest[-1]:
             countbest = count
             Xbest = X
             periodicitybest = periodicity
             simsbest = sims
             periodbest = periodLength
-    
+
     return Xbest, countbest, periodicitybest, periodbest, simsbest
 
                 
@@ -61,13 +61,12 @@ def getFrames(vidPath, num_frames=64):
         img = Image.fromarray(frame)
         frames.append(img)
     cap.release()
-    
-    
-    newFrames = []
-    for i in range(1, num_frames + 1):
-        newFrames.append(frames[i * len(frames)//num_frames  - 1])
-    
-    return newFrames
+
+
+    return [
+        frames[i * len(frames) // num_frames - 1]
+        for i in range(1, num_frames + 1)
+    ]
 
 def predSmall(frames, model):
 
@@ -131,17 +130,9 @@ def getCount(period, periodicity = None):
 
     count = []
 
-    if periodicity is None:
-        periodicity = period > 2
-    else :
-        periodicity = periodicity.squeeze() > 0
-
+    periodicity = period > 2 if periodicity is None else periodicity.squeeze() > 0
     numofReps = 0
     for i in range(len(period)):
-        if period[i] == 0:
-            numofReps+=0
-        else:
-            numofReps += max(0, periodicity[i]/period[i])
-
+        numofReps += 0 if period[i] == 0 else max(0, periodicity[i]/period[i])
         count.append(int(numofReps))
     return count, period, periodicity
